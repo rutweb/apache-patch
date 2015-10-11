@@ -1,0 +1,351 @@
+diff --git a/fcgi.h b/fcgi.h
+index 083e524..c7005fb 100644
+--- a/fcgi.h
++++ b/fcgi.h
+@@ -34,6 +34,10 @@
+ #define APACHE2
+ #endif
+ 
++#ifdef AP_DECLARE_MODULE
++#define APACHE24
++#endif
++
+ #ifdef APACHE2
+ 
+ #include <sys/stat.h>
+@@ -57,10 +61,16 @@ typedef apr_status_t apcb_t;
+ #define XtOffsetOf APR_OFFSETOF
+ #define ap_select select
+ 
++#ifdef APACHE24
++#define unixd_config ap_unixd_config
++#endif
++
++#ifdef APACHE2
+ #define ap_user_id        unixd_config.user_id
+ #define ap_group_id       unixd_config.group_id
+ #define ap_user_name      unixd_config.user_name
+ #define ap_suexec_enabled unixd_config.suexec_enabled
++#endif
+ 
+ #ifndef S_ISDIR
+ #define S_ISDIR(m)      (((m)&(S_IFMT)) == (S_IFDIR))
+@@ -298,6 +308,17 @@ typedef struct {
+     Buffer *erBufPtr;
+     int exitStatus;
+     int exitStatusSet;
++
++    /* Byte - AAH */
++    FCGI_ByteAccBody byteAccBody;
++    Buffer *byteAccBufPtr;
++    int readingByteAccBody;
++    uint64_t utime;
++    uint64_t stime;
++    uint64_t cutime;
++    uint64_t cstime;
++    /* End Byte - AAH */
++
+     unsigned int requestId;
+     int eofSent;
+     int role;                       /* FastCGI Role: Authorizer or Responder */
+@@ -352,42 +373,42 @@ typedef struct
+ #ifdef APACHE2
+ 
+ #ifdef WIN32
+-#define FCGI_LOG_EMERG          __FILE__,__LINE__,APLOG_EMERG,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_ALERT          __FILE__,__LINE__,APLOG_ALERT,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_CRIT           __FILE__,__LINE__,APLOG_CRIT,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_ERR            __FILE__,__LINE__,APLOG_ERR,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_WARN           __FILE__,__LINE__,APLOG_WARNING,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_NOTICE         __FILE__,__LINE__,APLOG_NOTICE,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_INFO           __FILE__,__LINE__,APLOG_INFO,APR_FROM_OS_ERROR(GetLastError())
+-#define FCGI_LOG_DEBUG          __FILE__,__LINE__,APLOG_DEBUG,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_EMERG          APLOG_MARK,APLOG_EMERG,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_ALERT          APLOG_MARK,APLOG_ALERT,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_CRIT           APLOG_MARK,APLOG_CRIT,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_ERR            APLOG_MARK,APLOG_ERR,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_WARN           APLOG_MARK,APLOG_WARNING,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_NOTICE         APLOG_MARK,APLOG_NOTICE,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_INFO           APLOG_MARK,APLOG_INFO,APR_FROM_OS_ERROR(GetLastError())
++#define FCGI_LOG_DEBUG          APLOG_MARK,APLOG_DEBUG,APR_FROM_OS_ERROR(GetLastError())
+ #else /* !WIN32 */
+-#define FCGI_LOG_EMERG          __FILE__,__LINE__,APLOG_EMERG,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_ALERT          __FILE__,__LINE__,APLOG_ALERT,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_CRIT           __FILE__,__LINE__,APLOG_CRIT,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_ERR            __FILE__,__LINE__,APLOG_ERR,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_WARN           __FILE__,__LINE__,APLOG_WARNING,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_NOTICE         __FILE__,__LINE__,APLOG_NOTICE,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_INFO           __FILE__,__LINE__,APLOG_INFO,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_DEBUG          __FILE__,__LINE__,APLOG_DEBUG,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_EMERG          APLOG_MARK,APLOG_EMERG,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_ALERT          APLOG_MARK,APLOG_ALERT,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_CRIT           APLOG_MARK,APLOG_CRIT,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_ERR            APLOG_MARK,APLOG_ERR,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_WARN           APLOG_MARK,APLOG_WARNING,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_NOTICE         APLOG_MARK,APLOG_NOTICE,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_INFO           APLOG_MARK,APLOG_INFO,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_DEBUG          APLOG_MARK,APLOG_DEBUG,APR_FROM_OS_ERROR(errno)
+ #endif
+ 
+-#define FCGI_LOG_EMERG_ERRNO    __FILE__,__LINE__,APLOG_EMERG,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_ALERT_ERRNO    __FILE__,__LINE__,APLOG_ALERT,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_CRIT_ERRNO     __FILE__,__LINE__,APLOG_CRIT,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_ERR_ERRNO      __FILE__,__LINE__,APLOG_ERR,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_WARN_ERRNO     __FILE__,__LINE__,APLOG_WARNING,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_NOTICE_ERRNO   __FILE__,__LINE__,APLOG_NOTICE,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_INFO_ERRNO     __FILE__,__LINE__,APLOG_INFO,APR_FROM_OS_ERROR(errno)
+-#define FCGI_LOG_DEBUG_ERRNO    __FILE__,__LINE__,APLOG_DEBUG,APR_FROM_OS_ERROR(errno)
+-
+-#define FCGI_LOG_EMERG_NOERRNO    __FILE__,__LINE__,APLOG_EMERG,0
+-#define FCGI_LOG_ALERT_NOERRNO    __FILE__,__LINE__,APLOG_ALERT,0
+-#define FCGI_LOG_CRIT_NOERRNO     __FILE__,__LINE__,APLOG_CRIT,0
+-#define FCGI_LOG_ERR_NOERRNO      __FILE__,__LINE__,APLOG_ERR,0
+-#define FCGI_LOG_WARN_NOERRNO     __FILE__,__LINE__,APLOG_WARNING,0
+-#define FCGI_LOG_NOTICE_NOERRNO   __FILE__,__LINE__,APLOG_NOTICE,0
+-#define FCGI_LOG_INFO_NOERRNO     __FILE__,__LINE__,APLOG_INFO,0
+-#define FCGI_LOG_DEBUG_NOERRNO    __FILE__,__LINE__,APLOG_DEBUG,0
++#define FCGI_LOG_EMERG_ERRNO    APLOG_MARK,APLOG_EMERG,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_ALERT_ERRNO    APLOG_MARK,APLOG_ALERT,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_CRIT_ERRNO     APLOG_MARK,APLOG_CRIT,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_ERR_ERRNO      APLOG_MARK,APLOG_ERR,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_WARN_ERRNO     APLOG_MARK,APLOG_WARNING,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_NOTICE_ERRNO   APLOG_MARK,APLOG_NOTICE,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_INFO_ERRNO     APLOG_MARK,APLOG_INFO,APR_FROM_OS_ERROR(errno)
++#define FCGI_LOG_DEBUG_ERRNO    APLOG_MARK,APLOG_DEBUG,APR_FROM_OS_ERROR(errno)
++
++#define FCGI_LOG_EMERG_NOERRNO    APLOG_MARK,APLOG_EMERG,0
++#define FCGI_LOG_ALERT_NOERRNO    APLOG_MARK,APLOG_ALERT,0
++#define FCGI_LOG_CRIT_NOERRNO     APLOG_MARK,APLOG_CRIT,0
++#define FCGI_LOG_ERR_NOERRNO      APLOG_MARK,APLOG_ERR,0
++#define FCGI_LOG_WARN_NOERRNO     APLOG_MARK,APLOG_WARNING,0
++#define FCGI_LOG_NOTICE_NOERRNO   APLOG_MARK,APLOG_NOTICE,0
++#define FCGI_LOG_INFO_NOERRNO     APLOG_MARK,APLOG_INFO,0
++#define FCGI_LOG_DEBUG_NOERRNO    APLOG_MARK,APLOG_DEBUG,0
+ 
+ #else /* !APACHE2 */
+ 
+diff --git a/fcgi_config.c b/fcgi_config.c
+index b86c509..5d411f5 100644
+--- a/fcgi_config.c
++++ b/fcgi_config.c
+@@ -1204,7 +1204,7 @@ const char *fcgi_config_new_auth_server(cmd_parms * cmd,
+     if (compat && strcasecmp(compat, "-compat"))
+         return ap_psprintf(cmd->temp_pool, "%s: unknown option: \"%s\"", cmd->cmd->name, compat);
+ 
+-    switch((int)cmd->info) {
++    switch((intptr_t)cmd->info) {
+         case FCGI_AUTH_TYPE_AUTHENTICATOR:
+             dir_config->authenticator = auth_server;
+             dir_config->authenticator_options |= (compat) ? FCGI_COMPAT : 0;
+diff --git a/fcgi_protocol.c b/fcgi_protocol.c
+index dc688b7..903871c 100644
+--- a/fcgi_protocol.c
++++ b/fcgi_protocol.c
+@@ -445,8 +445,8 @@ int fcgi_protocol_dequeue(pool *p, fcgi_request *fr)
+                         ap_log_rerror(FCGI_LOG_ERR_NOERRNO, fr->r,
+                             "FastCGI: comm with server \"%s\" aborted: protocol error: "
+                             "invalid FCGI_END_REQUEST size: "
+-                            "%d != sizeof(FCGI_EndRequestBody)(%d)",
+-                            fr->fs_path, fr->dataLen, sizeof(FCGI_EndRequestBody));
++                            "%d != sizeof(FCGI_EndRequestBody)(%ld)",
++                            fr->fs_path, fr->dataLen, (unsigned long) sizeof(FCGI_EndRequestBody));
+                         return HTTP_INTERNAL_SERVER_ERROR;
+                     }
+                     fr->readingEndRequestBody = TRUE;
+@@ -478,6 +478,92 @@ int fcgi_protocol_dequeue(pool *p, fcgi_request *fr)
+                     fr->readingEndRequestBody = FALSE;
+                 }
+                 break;
++	    case FCGI_BYTE_ACC:
++		/* Look in our state variable if we are already reading the request
++		   NB that this is a multiplexed protocol, so the request might span
++		   multiple packets. Therefore we read and if that is all, save times */
++
++                if (!fr->readingByteAccBody) {
++                    if (fr->dataLen != sizeof(FCGI_ByteAccBody)) {
++                        ap_log_rerror(FCGI_LOG_ERR_NOERRNO, fr->r,
++                            "FastCGI: comm with server \"%s\" aborted: protocol error: "
++                            "invalid FCGI_BYTE_ACC size: "
++                            "%d != sizeof(FCGI_EndRequestBody)(%ld)",
++                            fr->fs_path, fr->dataLen, (unsigned long) sizeof(FCGI_ByteAccBody));
++
++                        return HTTP_INTERNAL_SERVER_ERROR;
++                    }
++                    fr->readingByteAccBody = TRUE;
++                }
++
++		/* Check to see if there is still content left to read. If so, read it */
++                if (len>0) {
++                    fcgi_buf_get_to_buf(fr->byteAccBufPtr, fr->serverInputBuffer, len);
++                    fr->dataLen -= len;
++                }
++
++		/* If all data is exhausted, save all usage info */
++                if (fr->dataLen == 0) {
++                    FCGI_ByteAccBody *byteAccBody = &fr->byteAccBody;
++                    fcgi_buf_get_to_block(
++                        fr->byteAccBufPtr, (char *) &fr->byteAccBody,
++                        sizeof(FCGI_ByteAccBody));
++
++			/* Calculate the times. Bitshift the simple 8-bit values into a 64-bit unsigned long)
++			     We cast the 8-bit chars to unsigned long first, otherwise gcc will complain */
++
++			fr->utime = 	  ((uint64_t) (byteAccBody->ownUserTimeB7 & 0xff) << 8 * 7) 
++				 	+ ((uint64_t) (byteAccBody->ownUserTimeB6 & 0xff) << 8 * 6)
++				 	+ ((uint64_t) (byteAccBody->ownUserTimeB5 & 0xff) << 8 * 5)
++				 	+ ((uint64_t) (byteAccBody->ownUserTimeB4 & 0xff) << 8 * 4)
++				 	+ ((uint64_t) (byteAccBody->ownUserTimeB3 & 0xff) << 8 * 3)
++				 	+ ((uint64_t) (byteAccBody->ownUserTimeB2 & 0xff) << 8 * 2)
++			                + ((uint64_t) (byteAccBody->ownUserTimeB1 & 0xff) << 8 * 1)
++					+ ((uint64_t) (byteAccBody->ownUserTimeB0 & 0xff) << 8 * 0);
++
++			fr->stime = 	  ((uint64_t) (byteAccBody->ownSystemTimeB7 & 0xff) << 8 * 7) 
++				 	+ ((uint64_t) (byteAccBody->ownSystemTimeB6 & 0xff) << 8 * 6)
++				 	+ ((uint64_t) (byteAccBody->ownSystemTimeB5 & 0xff) << 8 * 5)
++				 	+ ((uint64_t) (byteAccBody->ownSystemTimeB4 & 0xff) << 8 * 4)
++				 	+ ((uint64_t) (byteAccBody->ownSystemTimeB3 & 0xff) << 8 * 3)
++				 	+ ((uint64_t) (byteAccBody->ownSystemTimeB2 & 0xff) << 8 * 2)
++			                + ((uint64_t) (byteAccBody->ownSystemTimeB1 & 0xff) << 8 * 1)
++					+ ((uint64_t) (byteAccBody->ownSystemTimeB0 & 0xff) << 8 * 0);
++
++			fr->cutime = 	  ((uint64_t) (byteAccBody->childUserTimeB7 & 0xff) << 8 * 7) 
++				 	+ ((uint64_t) (byteAccBody->childUserTimeB6 & 0xff) << 8 * 6)
++				 	+ ((uint64_t) (byteAccBody->childUserTimeB5 & 0xff) << 8 * 5)
++				 	+ ((uint64_t) (byteAccBody->childUserTimeB4 & 0xff) << 8 * 4)
++				 	+ ((uint64_t) (byteAccBody->childUserTimeB3 & 0xff) << 8 * 3)
++				 	+ ((uint64_t) (byteAccBody->childUserTimeB2 & 0xff) << 8 * 2)
++			                + ((uint64_t) (byteAccBody->childUserTimeB1 & 0xff) << 8 * 1)
++					+ ((uint64_t) (byteAccBody->childUserTimeB0 & 0xff) << 8 * 0);
++
++			fr->cstime = 	  ((uint64_t) (byteAccBody->childSystemTimeB7 & 0xff) << 8 * 7) 
++				 	+ ((uint64_t) (byteAccBody->childSystemTimeB6 & 0xff) << 8 * 6)
++				 	+ ((uint64_t) (byteAccBody->childSystemTimeB5 & 0xff) << 8 * 5)
++				 	+ ((uint64_t) (byteAccBody->childSystemTimeB4 & 0xff) << 8 * 4)
++				 	+ ((uint64_t) (byteAccBody->childSystemTimeB3 & 0xff) << 8 * 3)
++				 	+ ((uint64_t) (byteAccBody->childSystemTimeB2 & 0xff) << 8 * 2)
++			                + ((uint64_t) (byteAccBody->childSystemTimeB1 & 0xff) << 8 * 1)
++					+ ((uint64_t) (byteAccBody->childSystemTimeB0 & 0xff) << 8 * 0);
++
++		    ap_log_rerror(FCGI_LOG_DEBUG_NOERRNO, fr->r,
++			"FastCGI: Byte packet processed: utime is %llu, stime is %llu, cutime is %llu, cstime = %llu", (unsigned long long int) fr->utime, (unsigned long long int) fr->stime, (unsigned long long int) fr->cutime, (unsigned long long int) fr->cstime);
++
++		    /* Set the request notes so we can print the rusage with mod_log through environment variables */
++		    request_rec *last = fr->r;
++                    while (last->next)
++			last = last->next; // find the last request, we insert notes there
++
++		    apr_table_setn(last->notes, "ACC_utime", apr_psprintf(last->pool,  "%llu", (unsigned long long int) fr->utime));
++		    apr_table_setn(last->notes, "ACC_stime", apr_psprintf(last->pool,  "%llu", (unsigned long long int) fr->stime));
++		    apr_table_setn(last->notes, "ACC_cutime", apr_psprintf(last->pool, "%llu", (unsigned long long int) fr->cutime));
++		    apr_table_setn(last->notes, "ACC_cstime", apr_psprintf(last->pool, "%llu", (unsigned long long int) fr->cstime));
++
++                    fr->readingByteAccBody = FALSE;
++                }
++		break;
+             case FCGI_GET_VALUES_RESULT:
+                 /* XXX coming soon */
+             case FCGI_UNKNOWN_TYPE:
+diff --git a/fcgi_protocol.h b/fcgi_protocol.h
+index 60558df..dc6cc8a 100644
+--- a/fcgi_protocol.h
++++ b/fcgi_protocol.h
+@@ -52,7 +52,8 @@ typedef struct {
+ #define FCGI_DATA                8
+ #define FCGI_GET_VALUES          9
+ #define FCGI_GET_VALUES_RESULT  10
+-#define FCGI_UNKNOWN_TYPE       11
++#define FCGI_BYTE_ACC           15
++#define FCGI_UNKNOWN_TYPE       16
+ #define FCGI_MAXTYPE (FCGI_UNKNOWN_TYPE)
+ 
+ /*
+@@ -108,6 +109,50 @@ typedef struct {
+ #define FCGI_OVERLOADED       2
+ #define FCGI_UNKNOWN_ROLE     3
+ 
++/*
++ * Byte - AAH - define Byte data structures for BSD accounting
++ */
++
++typedef struct {
++    unsigned char ownSystemTimeB7;
++    unsigned char ownSystemTimeB6;
++    unsigned char ownSystemTimeB5;
++    unsigned char ownSystemTimeB4;
++    unsigned char ownSystemTimeB3;
++    unsigned char ownSystemTimeB2;
++    unsigned char ownSystemTimeB1;
++    unsigned char ownSystemTimeB0;
++
++    unsigned char ownUserTimeB7;
++    unsigned char ownUserTimeB6;
++    unsigned char ownUserTimeB5;
++    unsigned char ownUserTimeB4;
++    unsigned char ownUserTimeB3;
++    unsigned char ownUserTimeB2;
++    unsigned char ownUserTimeB1;
++    unsigned char ownUserTimeB0;
++
++    unsigned char childSystemTimeB7;
++    unsigned char childSystemTimeB6;
++    unsigned char childSystemTimeB5;
++    unsigned char childSystemTimeB4;
++    unsigned char childSystemTimeB3;
++    unsigned char childSystemTimeB2;
++    unsigned char childSystemTimeB1;
++    unsigned char childSystemTimeB0;
++
++    unsigned char childUserTimeB7;
++    unsigned char childUserTimeB6;
++    unsigned char childUserTimeB5;
++    unsigned char childUserTimeB4;
++    unsigned char childUserTimeB3;
++    unsigned char childUserTimeB2;
++    unsigned char childUserTimeB1;
++    unsigned char childUserTimeB0;
++
++    unsigned char reserved[8];
++} FCGI_ByteAccBody;
++
+ 
+ /*
+  * Variable names for FCGI_GET_VALUES / FCGI_GET_VALUES_RESULT records
+diff --git a/mod_fastcgi.c b/mod_fastcgi.c
+index 9d59e11..a08db09 100644
+--- a/mod_fastcgi.c
++++ b/mod_fastcgi.c
+@@ -97,6 +97,10 @@ do {                                                  \
+ } while (0)
+ #endif
+ 
++#ifdef APACHE24
++module AP_MODULE_DECLARE_DATA fastcgi_module;
++#endif
++
+ /*
+  * Global variables
+  */
+@@ -2539,6 +2543,11 @@ create_fcgi_request(request_rec * const r,
+ #endif    
+ 	}
+ 
++    /* Byte AAH */
++    fr->byteAccBufPtr = fcgi_buf_new(p, sizeof(FCGI_ByteAccBody) + 1);
++    fr->readingByteAccBody = 1;
++    /* End Byte AAH */
++
+     set_uid_n_gid(r, &fr->user, &fr->group);
+ 
+     *frP = fr;
+@@ -2967,7 +2976,11 @@ static void register_hooks(apr_pool_t * p)
+     ap_hook_fixups(fixups, NULL, NULL, APR_HOOK_MIDDLE); 
+ }
+ 
++#ifdef APACHE24
++AP_DECLARE_MODULE(fastcgi) =
++#else
+ module AP_MODULE_DECLARE_DATA fastcgi_module =
++#endif
+ {
+     STANDARD20_MODULE_STUFF,
+     fcgi_config_create_dir_config,  /* per-directory config creator */
