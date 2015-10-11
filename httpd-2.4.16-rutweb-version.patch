@@ -1,0 +1,32 @@
+diff --git a/server/core.c b/server/core.c
+index 5b4fe7d..c7a18ad 100755
+--- a/server/core.c
++++ b/server/core.c
+@@ -3198,6 +3198,7 @@ enum server_token_type {
+     SrvTk_OS,            /* eg: Apache/2.0.41 (UNIX) */
+     SrvTk_FULL,          /* eg: Apache/2.0.41 (UNIX) PHP/4.2.2 FooBar/1.2b */
+     SrvTk_PRODUCT_ONLY   /* eg: Apache */
++    ,SrvTk_RUTWEB /* rutweb.com version */
+ };
+ static enum server_token_type ap_server_tokens = SrvTk_FULL;
+ 
+@@ -3273,6 +3274,9 @@ static void set_banner(apr_pool_t *pconf)
+     else if (ap_server_tokens == SrvTk_MAJOR) {
+         ap_add_version_component(pconf, AP_SERVER_BASEPRODUCT "/" AP_SERVER_MAJORVERSION);
+     }
++    else if (ap_server_tokens == SrvTk_RUTWEB) {
++        ap_add_version_component(pconf, "rutweb/WS -- http://rutweb.com");
++    }
+     else {
+         ap_add_version_component(pconf, AP_SERVER_BASEVERSION " (" PLATFORM ")");
+     }
+@@ -3314,6 +3318,9 @@ static const char *set_serv_tokens(cmd_parms *cmd, void *dummy,
+     else if (!strcasecmp(arg, "Full")) {
+         ap_server_tokens = SrvTk_FULL;
+     }
++    else if (!strcasecmp(arg, "rutweb")) {
++        ap_server_tokens = SrvTk_RUTWEB;
++    }
+     else {
+         return "ServerTokens takes 1 argument: 'Prod(uctOnly)', 'Major', 'Minor', 'Min(imal)', 'OS', or 'Full'";
+     }
